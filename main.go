@@ -4,9 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/url"
-	"os"
 	"strings"
 	"sync"
 
@@ -231,10 +229,5 @@ func New() (interface{}, error) {
 }
 
 func main() {
-	db, err := New()
-	if err != nil {
-		log.Println(err)
-		os.Exit(1)
-	}
-	dbplugin.Serve(db.(dbplugin.Database))
+	dbplugin.ServeMultiplex(New)
 }
