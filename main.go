@@ -2,8 +2,12 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"net/url"
 	"strings"
 	"sync"
@@ -220,7 +224,28 @@ func buildClient(config map[string]interface{}) (*madmin.AdminClient, error) {
 	}
 
 	ssl := (parsed_url.Scheme == "https")
-	return madmin.New(parsed_url.Host, accessKey, secretKey, ssl)
+	client, err := madmin.New(parsed_url.Host, accessKey, secretKey, ssl)
+	if err != nil {
+		return nil, err
+	}
+
+	if raw, ok := config["ca_file"]; !ok {
+	} else if ca_file, ok := raw.(string); ok {
+		pool := x509.NewCertPool()
+		pem, err := ioutil.ReadFile(ca_file)
+		if err != nil {
+			return nil, err
+		}
+		if !pool.AppendCertsFromPEM(pem) {
+			return nil, fmt.Errorf("Unable to load ca certificates")
+		}
+		tr := &http.Transport{
+			TLSClientConfig:    &tls.Config{RootCAs: pool},
+			DisableCompression: true,
+		}
+		client.SetCustomTransport(tr)
+	}
+	return client, nil
 }
 
 func New() (interface{}, error) {
